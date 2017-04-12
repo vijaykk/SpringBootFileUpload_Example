@@ -19,11 +19,12 @@ import java.util.Properties;
 import javax.annotation.PostConstruct;
 
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.stereotype.Service;
 
+import com.vijay.filecatalog.config.AppConfig;
 import com.vijay.filecatalog.model.FileData;
 import com.vijay.filecatalog.model.FileMetaData;
 
@@ -36,24 +37,17 @@ import com.vijay.filecatalog.model.FileMetaData;
  *
  */
 @Service("fileStoreDAO")
-@Configuration
-@PropertySource("classpath:application.properties")
 public class FileStoreDAOImpl implements FileStoreDAO 
 {
-	
-	@Value("${filestore.storage.directory}")
-	private String storageDirecoty;
-	
-	
-	@Value("${filestore.storage.metadata.filename}")
-	private String metaDataFileName;
+	@Autowired
+	private AppConfig appConfig;
 	
 	private static final Logger logger = Logger.getLogger(FileStoreDAOImpl.class);
 
 	
 	@PostConstruct
 	public void init() {
-		createDirectory(getStorageDirecoty());
+		createDirectory(getAppConfig().getStorageDirecoty());
 	}
 
 	@Override
@@ -72,7 +66,7 @@ public class FileStoreDAOImpl implements FileStoreDAO
 	private void saveMetaData(FileData fileData) throws IOException {
 		String path = getDirectoryPath(fileData);
 		Properties props = fileData.createProperties();
-		File f = new File(new File(path), getMetaDataFileName());
+		File f = new File(new File(path), getAppConfig().getMetaDataFileName());
 		System.out.println(f.getAbsolutePath());
 		OutputStream out = new FileOutputStream(f);
 		props.store(out, "Document meta data");
@@ -99,7 +93,7 @@ public class FileStoreDAOImpl implements FileStoreDAO
 
 	private String getDirectoryPath(String uuid) {
 		StringBuilder sb = new StringBuilder();
-		sb.append(getStorageDirecoty()).append(File.separator).append(uuid);
+		sb.append(getAppConfig().getStorageDirecoty()).append(File.separator).append(uuid);
 		String path = sb.toString();
 		return path;
 	}
@@ -140,7 +134,7 @@ public class FileStoreDAOImpl implements FileStoreDAO
 	}
 
 	private List<String> getUuidList() {
-        File file = new File(getStorageDirecoty());
+        File file = new File(getAppConfig().getStorageDirecoty());
         String[] directories = file.list(new FilenameFilter() {
           @Override
           public boolean accept(File current, String name) {
@@ -164,7 +158,7 @@ public class FileStoreDAOImpl implements FileStoreDAO
 
 	private Properties readProperties(String uuid) throws IOException {
         Properties prop = new Properties();
-        try(InputStream input = new FileInputStream(new File(getDirectoryPath(uuid),getMetaDataFileName())))
+        try(InputStream input = new FileInputStream(new File(getDirectoryPath(uuid),getAppConfig().getMetaDataFileName())))
        	{
         	 prop.load(input);
        	}
@@ -207,21 +201,14 @@ public class FileStoreDAOImpl implements FileStoreDAO
 		file.mkdirs();
 	}
 
-	public String getStorageDirecoty() {
-		return storageDirecoty;
+	public AppConfig getAppConfig() {
+		return appConfig;
 	}
 
-	public void setStorageDirecoty(String storageDirecoty) {
-		this.storageDirecoty = storageDirecoty;
-	}
-
-	public String getMetaDataFileName() {
-		return metaDataFileName;
-	}
-
-	public void setMetaDataFileName(String metaDataFileName) {
-		this.metaDataFileName = metaDataFileName;
+	public void setAppConfig(AppConfig appConfig) {
+		this.appConfig = appConfig;
 	}
 
 	
+		
 }

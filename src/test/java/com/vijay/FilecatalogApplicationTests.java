@@ -14,7 +14,6 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Logger;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -29,7 +28,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import com.vijay.filecatalog.client.FileCatalogServiceClient;
-import com.vijay.filecatalog.dao.FileStoreDAO;
+import com.vijay.filecatalog.config.AppConfig;
 import com.vijay.filecatalog.model.FileData;
 import com.vijay.filecatalog.model.FileMetaData;
 import com.vijay.filecatalog.scheduler.FilePublisher;
@@ -46,8 +45,6 @@ import com.vijay.filecatalog.service.FileCatalogService;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Configuration
-@PropertySource("classpath:application.properties")
 public class FilecatalogApplicationTests {
 
 	private static final Logger LOG = Logger.getLogger(FilecatalogApplicationTests.class);
@@ -63,9 +60,10 @@ public class FilecatalogApplicationTests {
 	@Autowired
 	private FilePublisher filePublisher;
 
-	@Value("${filestore.storage.directory}")
-	private String storageDirecoty;
-
+	@Autowired
+	private AppConfig appConfig;
+	
+	
 	@Before
 	public void setUp() throws IOException {
 		client = new FileCatalogServiceClient();
@@ -83,7 +81,7 @@ public class FilecatalogApplicationTests {
 
 	// @After
 	public void tearDown() {
-		deleteDirectory(new File(getStorageDirecoty()));
+		deleteDirectory(new File(getAppConfig().getStorageDirecoty()));
 	}
 
 	private void uploadFile(String fileName) throws IOException {
@@ -140,14 +138,6 @@ public class FilecatalogApplicationTests {
 		return (path.delete());
 	}
 
-	public String getStorageDirecoty() {
-		return storageDirecoty;
-	}
-
-	public void setStorageDirecoty(String storageDirecoty) {
-		this.storageDirecoty = storageDirecoty;
-	}
-
 	public FilePublisher getFilePublisher() {
 		return filePublisher;
 	}
@@ -156,4 +146,13 @@ public class FilecatalogApplicationTests {
 		this.filePublisher = filePublisher;
 	}
 
+	public AppConfig getAppConfig() {
+		return appConfig;
+	}
+
+	public void setAppConfig(AppConfig appConfig) {
+		this.appConfig = appConfig;
+	}
+
+	
 }

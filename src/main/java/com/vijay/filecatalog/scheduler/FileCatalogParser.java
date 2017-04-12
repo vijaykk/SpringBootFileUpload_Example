@@ -1,7 +1,6 @@
 package com.vijay.filecatalog.scheduler;
 
 import java.io.File;
-
 import java.io.FileInputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -12,12 +11,10 @@ import java.util.function.Consumer;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.stereotype.Repository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import com.vijay.filecatalog.controller.FileCatalogRestController;
+import com.vijay.filecatalog.config.AppConfig;
 import com.vijay.filecatalog.model.FileMetaData;
 
 /**
@@ -28,25 +25,24 @@ import com.vijay.filecatalog.model.FileMetaData;
  * @author Vijay Koppineedi
  *
  */
-@Configuration
-@PropertySource("classpath:application.properties")
-@Repository
+@Component
 public class FileCatalogParser {
-
-	@Value("${filestore.storage.directory}")
-	private String storageDirecoty;
 
 	private static final Logger logger = Logger.getLogger(FileCatalogParser.class);
 
 	private List<FileMetaData> fileMetaDataList = new ArrayList<FileMetaData>();
 
+	@Autowired
+	private AppConfig appConfig;
+	
+	
 	public List<FileMetaData> parseAndFindUnPublishedFiles() {
-		parseRecursive(false, new File(storageDirecoty));
+		parseRecursive(false, new File(getAppConfig().getStorageDirecoty()));
 		return fileMetaDataList;
 	}
 
 	public void markAllFilesAsPublished() {
-		parseRecursive(true, new File(storageDirecoty));
+		parseRecursive(true, new File(getAppConfig().getStorageDirecoty()));
 
 	}
 
@@ -124,12 +120,14 @@ public class FileCatalogParser {
 		void accept(T t) throws Exception;
 	}
 
-	public String getStorageDirecoty() {
-		return storageDirecoty;
+	public AppConfig getAppConfig() {
+		return appConfig;
 	}
 
-	public void setStorageDirecoty(String storageDirecoty) {
-		this.storageDirecoty = storageDirecoty;
+	public void setAppConfig(AppConfig appConfig) {
+		this.appConfig = appConfig;
 	}
+
+	
 
 }
