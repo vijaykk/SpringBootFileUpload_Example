@@ -1,0 +1,30 @@
+Steps to Configure FileCatalog application:
+1. Enter Gmail User name and password in application.properties for below properties.
+   mail.username=XXXXXXX@gmail.com
+   mail.password=XXXXX 
+    
+   This emailID will be used to send emails from the application
+   
+2. Enter emailID of the Receiver
+   mail.email.receiver.email=xxx@xxx.com
+
+   This email address will receive all the emails from the application.
+
+Note: Follow below URL and update your GMAIL settings as below to send emails from application
+      https://support.google.com/mail/answer/7126229?hl=en   
+
+Scheduler Functionality Testing:
+To Test the scheduler and email functionality in the application run below steps:
+
+1. Comment below Junit from Integration Test Class "FilecatalogApplicationTests.java"
+
+	@Test
+	public void test2_sendEmail() {
+		filePublisher.publishNewFiles();
+	}
+
+2. Run "FilecatalogApplicationTests.java" as Junit
+
+  Note: Junit will add new files under the folder "store" directory
+  
+3. Now Run "FilecatalogApplication.java" as Java Application from IDE. Check Receiver Email.
