@@ -1,0 +1,169 @@
+#!/bin/bash
+
+BASE_URL="http://localhost:8087/event/event"
+
+EVENT_TYPE="neal.tmjunq3qew41vk1b-vrn-e2e.dev.transaction.created"
+
+PAYLOAD_FILE="./payload.json"
+
+# =========================
+# Performance test settings
+# =========================
+rampUpSpeed=10
+testDuration=60
+requestsPerInterval=100
+totalRequests=5000
+interval=1
+
+# =========================
+# Counters
+# =========================
+sent=0
+success=0
+failed=0
+currentRate=$rampUpSpeed
+
+startTime=$(date +%s)
+
+echo "====================================="
+echo "Starting Performance Test"
+echo "====================================="
+echo "URL                   : $BASE_URL"
+echo "Event Type            : $EVENT_TYPE"
+echo "Ramp Up Speed         : $rampUpSpeed"
+echo "Requests Per Interval : $requestsPerInterval"
+echo "Interval              : ${interval}s"
+echo "Test Duration         : ${testDuration}s"
+echo "Total Requests        : $totalRequests"
+echo "Payload File          : $PAYLOAD_FILE"
+echo "====================================="
+echo
+
+# Validate payload file
+if [ ! -f "$PAYLOAD_FILE" ]; then
+    echo "ERROR: Payload file not found: $PAYLOAD_FILE"
+    exit 1
+fi
+
+
+while true
+do
+    now=$(date +%s)
+    elapsed=$((now - startTime))
+
+    # Stop when duration is reached
+    if [ "$elapsed" -ge "$testDuration" ]; then
+        echo
+        echo "Test duration reached."
+        break
+    fi
+
+    # Stop when total request count is reached
+    if [ "$sent" -ge "$totalRequests" ]; then
+        echo
+        echo "Total request limit reached."
+        break
+    fi
+
+    # Determine current batch size
+    batch=$currentRate
+
+    if [ "$batch" -gt "$requestsPerInterval" ]; then
+        batch=$requestsPerInterval
+    fi
+
+    remaining=$((totalRequests - sent))
+
+    if [ "$batch" -gt "$remaining" ]; then
+        batch=$remaining
+    fi
+
+    echo "Elapsed: ${elapsed}s | Sending: $batch | Total Sent: $sent"
+
+    # Temporary directory to collect HTTP status codes
+    tmpDir=$(mktemp -d)
+
+    # =========================
+    # Send concurrent requests
+    # =========================
+    for ((i=1; i<=batch; i++))
+    do
+        requestNumber=$((sent + i))
+
+        # Generate unique GUID on macOS
+        guid=$(sysctl -n kern.uuid | tr '[:upper:]' '[:lower:]')
+
+        url="${BASE_URL}?type=${EVENT_TYPE}&id=${guid}"
+
+        (
+            httpStatus=$(curl -s \
+                -o /dev/null \
+                -w "%{http_code}" \
+                -X POST \
+                "$url" \
+                -H "Content-Type: application/json" \
+                -H "x-idempotent-key: $guid" \
+                --data-binary "@${PAYLOAD_FILE}")
+
+            echo "$httpStatus" > "${tmpDir}/${requestNumber}.status"
+
+        ) &
+    done
+
+    # Wait until all requests in this batch finish
+    wait
+
+    # =========================
+    # Process batch results
+    # =========================
+    for statusFile in "$tmpDir"/*.status
+    do
+        if [ ! -f "$statusFile" ]; then
+            continue
+        fi
+
+        status=$(cat "$statusFile")
+
+        if [[ "$status" =~ ^2[0-9][0-9]$ ]]; then
+            success=$((success + 1))
+        else
+            failed=$((failed + 1))
+            echo "FAILED HTTP STATUS: $status"
+        fi
+    done
+
+    rm -rf "$tmpDir"
+
+    sent=$((sent + batch))
+
+    # =========================
+    # Ramp up
+    # =========================
+    currentRate=$((currentRate + rampUpSpeed))
+
+    if [ "$currentRate" -gt "$requestsPerInterval" ]; then
+        currentRate=$requestsPerInterval
+    fi
+
+    sleep "$interval"
+done
+
+
+endTime=$(date +%s)
+actualDuration=$((endTime - startTime))
+
+echo
+echo "====================================="
+echo "Performance Test Complete"
+echo "====================================="
+echo "Total Requests : $sent"
+echo "Successful     : $success"
+echo "Failed         : $failed"
+echo "Duration       : ${actualDuration}s"
+
+if [ "$actualDuration" -gt 0 ]; then
+    throughput=$(awk "BEGIN {printf \"%.2f\", $sent/$actualDuration}")
+    echo "Throughput     : ${throughput} requests/sec"
+fi
+
+echo "====================================="
